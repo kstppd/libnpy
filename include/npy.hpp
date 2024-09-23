@@ -504,6 +504,36 @@ inline npy_data<Scalar> read_npy(std::istream &in) {
 }
 
 template <typename Scalar>
+inline void read_npy_into(std::istream &in,npy_data<Scalar>& data) {
+  std::string header_s = read_header(in);
+
+  // parse header
+  header_t header = parse_header(header_s);
+
+  // check if the typestring matches the given one
+  const dtype_t dtype = dtype_map.at(std::type_index(typeid(Scalar)));
+
+  if (header.dtype.tie() != dtype.tie()) {
+    throw std::runtime_error("formatting error: typestrings not matching");
+  }
+
+  // compute the data size based on the shape
+  auto size = static_cast<size_t>(comp_size(header.shape));
+
+  data.shape = header.shape;
+  data.fortran_order = header.fortran_order;
+
+  //This will now do nothing
+  if (data.data.size()!=size){
+    data.data.resize(size);
+  }
+
+  // read the data
+  in.read(reinterpret_cast<char *>(data.data.data()), sizeof(Scalar) * size);
+  return;
+}
+
+template <typename Scalar>
 inline npy_data<Scalar> read_npy(const std::string &filename) {
   std::ifstream stream(filename, std::ifstream::binary);
   if (!stream) {
@@ -511,6 +541,16 @@ inline npy_data<Scalar> read_npy(const std::string &filename) {
   }
 
   return read_npy<Scalar>(stream);
+}
+
+template <typename Scalar>
+inline void read_npy_into(const std::string &filename,npy_data<Scalar>& data) {
+  std::ifstream stream(filename, std::ifstream::binary);
+  if (!stream) {
+    throw std::runtime_error("io error: failed to open a file.");
+  }
+  read_npy_into<Scalar>(stream,data);
+  return;
 }
 
 template <typename Scalar>
