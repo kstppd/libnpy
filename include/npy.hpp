@@ -504,7 +504,7 @@ inline npy_data<Scalar> read_npy(std::istream &in) {
 }
 
 template <typename Scalar>
-inline void read_npy_into(std::istream &in,npy_data<Scalar>& data) {
+inline void read_npy_into(std::istream &in, npy_data<Scalar> &data) {
   std::string header_s = read_header(in);
 
   // parse header
@@ -523,8 +523,8 @@ inline void read_npy_into(std::istream &in,npy_data<Scalar>& data) {
   data.shape = header.shape;
   data.fortran_order = header.fortran_order;
 
-  //This will now do nothing
-  if (data.data.size()!=size){
+  // This will now do nothing
+  if (data.data.size() != size) {
     data.data.resize(size);
   }
 
@@ -544,12 +544,12 @@ inline npy_data<Scalar> read_npy(const std::string &filename) {
 }
 
 template <typename Scalar>
-inline void read_npy_into(const std::string &filename,npy_data<Scalar>& data) {
+inline void read_npy_into(const std::string &filename, npy_data<Scalar> &data) {
   std::ifstream stream(filename, std::ifstream::binary);
   if (!stream) {
     throw std::runtime_error("io error: failed to open a file.");
   }
-  read_npy_into<Scalar>(stream,data);
+  read_npy_into<Scalar>(stream, data);
   return;
 }
 
