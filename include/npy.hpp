@@ -23,6 +23,9 @@
 #ifndef NPY_HPP_
 #define NPY_HPP_
 
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <algorithm>
 #include <array>
 #include <complex>
@@ -31,6 +34,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -40,6 +44,38 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+template <typename T>
+struct mmapAllocator {
+  using value_type = T;
+
+  mmapAllocator() = default;
+  template <typename U>
+  constexpr mmapAllocator(const mmapAllocator<U> &) noexcept {}
+
+  T *allocate(std::size_t n) {
+    std::size_t size = n * sizeof(T);
+    void *ptr = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (ptr == MAP_FAILED) {
+      throw std::bad_alloc();
+    }
+    return static_cast<T *>(ptr);
+  }
+
+  void deallocate(T *ptr, std::size_t n) noexcept {
+    std::size_t size = n * sizeof(T);
+    munmap(ptr, size);
+  }
+
+  template <typename U>
+  bool operator==(const mmapAllocator<U> &) const {
+    return true;
+  }
+  template <typename U>
+  bool operator!=(const mmapAllocator<U> &) const {
+    return false;
+  }
+};
 
 namespace npy {
 
@@ -461,7 +497,7 @@ inline ndarray_len_t comp_size(const shape_t &shape) {
 
 template <typename Scalar>
 struct npy_data {
-  std::vector<Scalar> data = {};
+  std::vector<Scalar,mmapAllocator<Scalar>> data = {};
   shape_t shape = {};
   bool fortran_order = false;
 };
