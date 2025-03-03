@@ -504,6 +504,41 @@ inline npy_data<Scalar> read_npy(std::istream &in) {
 }
 
 template <typename Scalar>
+inline npy_data<Scalar> read_npy_partial(std::istream &in,shape_t shape_requested,std::size_t byte_offset) {
+  std::string header_s = read_header(in);
+
+  // parse header
+  const header_t header = parse_header(header_s);
+
+  // check if the typestring matches the given one
+  const dtype_t dtype = dtype_map.at(std::type_index(typeid(Scalar)));
+
+  if (header.dtype.tie() != dtype.tie()) {
+    throw std::runtime_error("formatting error: typestrings not matching");
+  }
+
+  // compute the data size based on the shape the user requested
+  const auto requested_size=static_cast<size_t>(comp_size(shape_requested));
+
+  npy_data<Scalar> data;
+
+  data.shape = shape_requested;
+  data.fortran_order = header.fortran_order;
+
+  data.data.resize(requested_size);
+
+  // read the data
+  if (byte_offset>0){
+    in.seekg(byte_offset,std::ios::beg);
+  }
+  in.read(reinterpret_cast<char *>(data.data.data()), sizeof(Scalar) * requested_size);
+  if (!in){
+    std::cerr<<"ERROR: partial read failed!"<<std::endl; 
+  }
+  return data;
+}
+
+template <typename Scalar>
 inline void read_npy_into(std::istream &in, npy_data<Scalar> &data) {
   std::string header_s = read_header(in);
 
@@ -533,6 +568,13 @@ inline void read_npy_into(std::istream &in, npy_data<Scalar> &data) {
   return;
 }
 
+
+inline shape_t read_npy_shape(std::istream& in) {
+  std::string header_s = read_header(in);
+  header_t header = parse_header(header_s);
+  return header.shape;
+}
+
 template <typename Scalar>
 inline npy_data<Scalar> read_npy(const std::string &filename) {
   std::ifstream stream(filename, std::ifstream::binary);
@@ -541,6 +583,25 @@ inline npy_data<Scalar> read_npy(const std::string &filename) {
   }
 
   return read_npy<Scalar>(stream);
+}
+
+template <typename Scalar>
+inline npy_data<Scalar> read_npy_partial(const std::string &filename,shape_t shape,std::size_t byte_offset) {
+  std::ifstream stream(filename, std::ifstream::binary);
+  if (!stream) {
+    throw std::runtime_error("io error: failed to open a file.");
+  }
+
+  return read_npy_partial<Scalar>(stream, shape, byte_offset);
+}
+
+inline shape_t read_npy_shape(const std::string &filename) {
+  std::ifstream stream(filename, std::ifstream::binary);
+  if (!stream) {
+    throw std::runtime_error("io error: failed to open a file.");
+  }
+
+  return read_npy_shape(stream);
 }
 
 template <typename Scalar>
