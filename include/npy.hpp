@@ -529,7 +529,7 @@ inline npy_data<Scalar> read_npy_partial(std::istream &in,shape_t shape_requeste
 
   // read the data
   if (byte_offset>0){
-    in.seekg(byte_offset,std::ios::beg);
+    in.seekg(static_cast<std::streamoff>(byte_offset), std::ios::cur);
   }
   in.read(reinterpret_cast<char *>(data.data.data()), sizeof(Scalar) * requested_size);
   if (!in){
